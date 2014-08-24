@@ -1,0 +1,140 @@
+---
+title: 'Course Project: Practical  Machine Learning'
+author: "Natalia clivio"
+date: "Saturday, August 24, 2014"
+output: html_document
+---
+
+##Introduction
+The objective of this analysis is to predict the manner in which six participants did the exercise. They performed the excercise in five different ways; one exactly follows the specification, and the other four follow the specification incorrect way.
+The data for this project come from this source: <http://groupware.les.inf.puc-rio.br/har>
+
+##Data Preparation
+It is important to prepare the data to obtain more accurate results. 
+```{r}
+#Load Data splitting
+library(caret)
+library(ISLR)
+
+training <-read.csv("C:/Users/NataliaA/Desktop/CourseaR/pml-training.csv")
+testing <-read.csv("C:/Users/NataliaA/Desktop/CourseaR/pml-testing.csv")
+
+# remove near zero covariates
+nsv <- nearZeroVar(training, saveMetrics = TRUE)
+training <- training[, !nsv$nzv]
+
+# remove variables with more than 80% missing values
+nav <- sapply(colnames(training), function(x) if(sum(is.na(training[, x])) > 0.8*nrow(training)){return(T)}else{return(F)})
+training <- training[, !nav]
+
+# calculate correlations
+cor <- abs(sapply(colnames(training[, -ncol(training)]), function(x) cor(as.numeric(training[, x]), as.numeric(training$classe), method = "spearman")))
+summary(cor)
+```
+
+Plot the variables more correlationed with the **classe** variable in the training set data, are showed in the following figure: 
+
+```{r, echo=FALSE}
+# plot predictors 
+qplot(training[,names(which.max(cor))],training[,names(which.max(cor[-which.max(cor)]))],colour=classe,data=training,xlab = names(which.max(cor)), ylab = names(which.max(cor[-which.max(cor)])))
+
+```
+
+The training set has 19622 samples and 57 potential predictors after filtering.
+
+There doesn't seem to be any strong predictors that correlates with classe properly, thereby linear regression model is probably not suitable in this case. Random forest and Boosting algorithms may generate more robust predictions for our data.
+
+Then the Random forest and Bosting algorithms are compared to determine which is more accurate and makes final predictions.
+
+##Random Forest
+
+```{r}
+
+library(randomForest)
+
+set.seed(123)
+modFitrf <- train(classe ~ ., method = "rf", data = training, importance = TRUE, trControl = trainControl(method = "cv", number = 10))
+
+modFitrf
+
+```
+
+The accurancy of the model is:
+
+```{r}
+plot(modFitrf, ylim = c(0.95, 1))
+
+```
+_Figure 1_
+
+The random forests algorithm generated has a very accurate model with accuracy close to 1. 
+
+##Boosting model
+Fit model with boosting algorithm and 10-fold cross validation to predict classe with all other predictors.
+
+```{r}
+#Boosing
+set.seed(123)
+modFitB <- train(classe ~ ., method = "gbm", data = training, verbose = F, trControl = trainControl(method = "cv", number = 10))
+
+modFitB
+```
+
+The accurancy of the model is:
+
+```{r}
+plot(boostFit, ylim = c(0.95, 1))
+```
+_Figure 2_
+
+The boosting algorithm generated a good model with accuracy = 0.997.Compared with the Random Forest, this model has less performance in terms of accuracy according to the figures 1 and 2.
+
+##Final Model and Predictions
+According to the above analysis, the final model will be done with Random Forest. 
+The final random forest model we can say: 
+
+*Contains 500 trees with 40 variables tried at each split. 
+*The five most important predictors in this model are:
+number | Variable
+------ | -------------
+1      | raw_timestamp_part_1
+2      | roll_belt
+3      | num_window
+4      | pitch_forearm 
+5      | cvtd_timestamp
+                
+*Estimated out of sample error rate for the random forests model is 0.04% as reported by the final model.
+*Predict the test set and output results for automatic grader.
+
+```{r}
+# final model
+library(rattle)
+modFitrf$finalModel
+fancyRpartPlot(modFitrf$finalModel)
+```
+
+```{r}
+# prediction
+(prediction <- as.character(predict(modFitrf, testing)))
+```
+
+##Predictions for the 20 test samples
+Apply the machine learning algorithm to the 20 test cases available in the test data above. 
+
+```{r}
+predict20 = predict(modFitrf, newdata = testing, type = "class")
+predict20
+```
+
+```{r}
+# write prediction files
+pred_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("./prediction/problem_id=", i, ".txt")
+    write.table(x[i], file = filename, quote = FALSE, row.names = FALSE, col.names = FALSE)
+  }
+}
+pred_write_files(predict20)
+
+```

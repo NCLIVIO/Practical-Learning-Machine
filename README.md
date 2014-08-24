@@ -3,7 +3,7 @@ Practical Machine Learning
 
 Course Project for Practical Machine Learning on Coursera
 
-#### To view html report online, please click [here](http://gloriali.github.io/PracticalMachineLearning_2014/project_report.html).         
+#### To view html report online, please click [here](_).         
 
 * [Course_Project.Rmd](./Course_Project.Rmd): R markdown document for course project report.        
 * [Course_Project.html](./Course_Project.html): Compiled html file for course project report.   

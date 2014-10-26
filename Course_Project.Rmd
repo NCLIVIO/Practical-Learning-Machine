@@ -4,6 +4,7 @@ author: "Natalia clivio"
 date: "Saturday, August 24, 2014"
 output: html_document
 
+
 ---
 
 ##Introduction
